@@ -8,6 +8,7 @@
 
 package com.facebook.shimmer;
 
+import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
@@ -21,6 +22,8 @@ import android.graphics.RadialGradient;
 import android.graphics.Rect;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
+import android.os.Handler;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -36,7 +39,15 @@ public final class ShimmerDrawable extends Drawable {
   private final Paint mShimmerPaint = new Paint();
   private final Rect mDrawRect = new Rect();
   private final Matrix mShaderMatrix = new Matrix();
-
+  private final Handler mDelayedRepeatHandler = new Handler();
+  private final Runnable mResumeAnimationRunnable = new Runnable() {
+    @Override
+    public void run() {
+      if (mValueAnimator != null) {
+        mValueAnimator.resume();
+      }
+    }
+  };
   private @Nullable ValueAnimator mValueAnimator;
 
   private @Nullable Shimmer mShimmer;
@@ -167,8 +178,32 @@ public final class ShimmerDrawable extends Drawable {
     mValueAnimator.setRepeatMode(mShimmer.repeatMode);
     mValueAnimator.setStartDelay(mShimmer.startDelay);
     mValueAnimator.setRepeatCount(mShimmer.repeatCount);
-    mValueAnimator.setDuration(mShimmer.animationDuration + mShimmer.repeatDelay);
+    mValueAnimator.setDuration(mShimmer.animationDuration);
     mValueAnimator.addUpdateListener(mUpdateListener);
+    mValueAnimator.addListener(new Animator.AnimatorListener() {
+      @Override
+      public void onAnimationStart(Animator animator) {
+
+      }
+
+      @Override
+      public void onAnimationEnd(Animator animator) {
+
+      }
+
+      @Override
+      public void onAnimationCancel(Animator animator) {
+
+      }
+
+      @Override
+      public void onAnimationRepeat(Animator animator) {
+        if (mShimmer.repeatDelay > 0) {
+          mValueAnimator.pause();
+          mDelayedRepeatHandler.postDelayed(mResumeAnimationRunnable, mShimmer.repeatDelay);
+        }
+      }
+    });
     if (started) {
       mValueAnimator.start();
     }
